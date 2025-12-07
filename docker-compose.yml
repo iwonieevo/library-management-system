@@ -2,7 +2,7 @@ services:
   web:
     build: .
     ports:
-      - "8000:8000"
+      - "${WEB_PORT}:8000"
     volumes:
       - .:/app
     depends_on:
@@ -12,7 +12,7 @@ services:
 
 
   db:
-    image: postgres:18
+    image: ${DB_IMAGE}
     env_file:
       - .env
     environment:
@@ -20,9 +20,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5433:5432"
+      - "${DB_EXPOSED_PORT}:${DB_PORT}"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - ${POSTGRES_DATA_VOLUME}:/var/lib/postgresql
       - ./db/create_tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql
       - ./db/create_indexes.sql:/docker-entrypoint-initdb.d/02_create_indexes.sql
       - ./db/create_views.sql:/docker-entrypoint-initdb.d/03_create_views.sql
