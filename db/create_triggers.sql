@@ -18,7 +18,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_max_reservations
-BEFORE INSERT ON Reservation
+BEFORE INSERT OR UPDATE ON Reservation
 FOR EACH ROW EXECUTE FUNCTION check_max_reservations();
 
 -- +====================+
@@ -41,7 +41,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_max_issues
-BEFORE INSERT ON Issue
+BEFORE INSERT OR UPDATE ON Issue
 FOR EACH ROW EXECUTE FUNCTION check_max_issues();
 
 -- +=================================+
@@ -55,8 +55,9 @@ BEGIN
         SELECT 1
         FROM Reservation r
         WHERE r.book_copy_id = NEW.book_copy_id
-          AND r.from_datetime <= NEW.to_datetime
-          AND r.to_datetime >= NEW.from_datetime
+          AND r.id <> NEW.id
+          AND ((r.from_datetime, r.to_datetime) 
+                OVERLAPS (NEW.from_datetime, NEW.to_datetime))
     ) THEN
         RAISE EXCEPTION 'Current reservation period overlaps with an existing reservation for this book copy.';
     END IF;
@@ -66,9 +67,8 @@ BEGIN
         SELECT 1
         FROM Issue i
         WHERE i.book_copy_id = NEW.book_copy_id
-          AND i.issue_datetime <= NEW.to_datetime
-          AND (i.return_datetime IS NULL 
-            OR i.return_datetime >= NEW.from_datetime)
+          AND ((i.issue_datetime, COALESCE(i.return_datetime, 'infinity'::timestamp)) 
+                OVERLAPS (NEW.from_datetime, NEW.to_datetime))
     ) THEN
         RAISE EXCEPTION 'Current reservation period overlaps with an existing issue for this book copy.';
     END IF;  
@@ -78,7 +78,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_reservation_conflicts
-BEFORE INSERT ON Reservation
+BEFORE INSERT OR UPDATE ON Reservation
 FOR EACH ROW EXECUTE FUNCTION check_reservation_conflicts();
 
 -- +===========================+
@@ -92,8 +92,8 @@ BEGIN
         SELECT 1
         FROM Reservation r
         WHERE r.book_copy_id = NEW.book_copy_id
-          AND r.from_datetime <= NEW.due_datetime
-          AND r.to_datetime >= NEW.issue_datetime
+          AND ((r.from_datetime, r.to_datetime) 
+                OVERLAPS (NEW.issue_datetime, COALESCE(NEW.return_datetime, 'infinity'::timestamp)))
     ) THEN
         RAISE EXCEPTION 'Current issue period overlaps with an existing reservation for this book copy.';
     END IF;
@@ -103,9 +103,9 @@ BEGIN
         SELECT 1
         FROM Issue i
         WHERE i.book_copy_id = NEW.book_copy_id
-          AND i.issue_datetime <= NEW.due_datetime
-          AND (i.return_datetime IS NULL 
-            OR i.return_datetime >= NEW.issue_datetime)
+          AND i.id <> NEW.id
+          AND ((i.issue_datetime, COALESCE(i.return_datetime, 'infinity'::timestamp)) 
+                OVERLAPS (NEW.issue_datetime, COALESCE(NEW.return_datetime, 'infinity'::timestamp)))
     ) THEN
         RAISE EXCEPTION 'Current issue period overlaps with an existing issue for this book copy.';
     END IF;  
@@ -115,5 +115,5 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_issue_conflicts
-BEFORE INSERT ON Issue
+BEFORE INSERT OR UPDATE ON Issue
 FOR EACH ROW EXECUTE FUNCTION check_issue_conflicts();
