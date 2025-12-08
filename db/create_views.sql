@@ -43,7 +43,7 @@ LEFT JOIN (
         SELECT 1
         FROM Issue i
         WHERE i.book_copy_id = bc.id
-          AND i.return_datetime IS NULL
+          AND COALESCE(i.return_datetime, 'infinity'::timestamp) > CURRENT_TIMESTAMP
     )
       AND NOT EXISTS (
         SELECT 1
@@ -74,11 +74,13 @@ SELECT
     NOT EXISTS (
         SELECT 1
         FROM Issue i
-        WHERE i.book_copy_id = bc.id AND i.return_datetime IS NULL
+        WHERE i.book_copy_id = bc.id 
+          AND COALESCE(i.return_datetime, 'infinity'::timestamp) > CURRENT_TIMESTAMP
     ) AND NOT EXISTS (
         SELECT 1
         FROM Reservation r
-        WHERE r.book_copy_id = bc.id AND r.to_datetime >= CURRENT_TIMESTAMP
+        WHERE r.book_copy_id = bc.id 
+          AND r.to_datetime >= CURRENT_TIMESTAMP
     ) AS available
 FROM Book_copy bc
 JOIN Book b ON bc.book_id = b.id
@@ -129,7 +131,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT reader_id, COUNT(*) AS count
     FROM Issue
-    WHERE return_datetime IS NULL
+    WHERE COALESCE(return_datetime, 'infinity'::timestamp) > CURRENT_TIMESTAMP
     GROUP BY reader_id
 ) active_issues ON r.id = active_issues.reader_id
 
