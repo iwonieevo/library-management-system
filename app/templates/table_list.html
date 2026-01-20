@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ table_name }}</title>
+</head>
+<body>
+
+<h1>{{ table_name | capitalize }}</h1>
+
+<table border="1">
+    <thead>
+        <tr>
+            {% for col in columns %}
+                <th>{{ col }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            {% for cell in row %}
+                <td>{{ cell }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p><a href="/superadmin_panel">Back to superadmin panel</a></p>
+
+</body>
+</html>

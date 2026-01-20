@@ -1,136 +1,100 @@
--- +======================+
--- | BOOK AGGREGATED INFO |
--- +======================+
-CREATE OR REPLACE VIEW book_aggregated_info AS
-SELECT
-    b.id AS "book_id",
-    b.title,
-    COALESCE(b.description, '') AS "description",
-    COALESCE(a.authors, '') AS "author",
-    COALESCE(c.categories, '') AS "category",
-    COALESCE(tc.total_amount, 0) AS "total_amount",
-    COALESCE(ac.available_amount, 0) AS "available_amount"
-FROM Book b
-
--- Concatenate authors
-LEFT JOIN (
-    SELECT ba.book_id, STRING_AGG(a.unique_name, ', ') AS authors
-    FROM Book_author ba
-    JOIN Author a ON ba.author_id = a.id
-    GROUP BY ba.book_id
-) a ON b.id = a.book_id
-
--- Concatenate categories
-LEFT JOIN (
-    SELECT bc.book_id, STRING_AGG(c.name, ', ') AS categories
-    FROM Book_category bc
-    JOIN Category c ON bc.category_id = c.id
-    GROUP BY bc.book_id
-) c ON b.id = c.book_id
-
--- Total amount of copies
-LEFT JOIN (
-    SELECT book_id, COUNT(*) AS total_amount
-    FROM Book_copy
-    GROUP BY book_id
-) tc ON b.id = tc.book_id
-
--- Available amount of copies (not issued and not reserved)
-LEFT JOIN (
-    SELECT bc.book_id, COUNT(*) AS available_amount
-    FROM Book_copy bc
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM Issue i
-        WHERE i.book_copy_id = bc.id
-          AND COALESCE(i.return_datetime, 'infinity'::timestamp) > CURRENT_TIMESTAMP
-    )
-      AND NOT EXISTS (
-        SELECT 1
-        FROM Reservation r
-        WHERE r.book_copy_id = bc.id
-          AND r.to_datetime >= CURRENT_TIMESTAMP
-    )
-    GROUP BY bc.book_id
-) ac ON b.id = ac.book_id;
-
--- +===========================+
--- | BOOK COPY AGGREGATED INFO |
--- +===========================+
-CREATE OR REPLACE VIEW book_copy_aggregated_info AS
+-- +================+
+-- | BOOK COPY INFO |
+-- +================+
+CREATE OR REPLACE VIEW book_copy_info_view AS
 SELECT
     bc.id AS "book_copy_id",
-    b.title AS "book_title",
-    COALESCE(a.authors, '') AS "book_authors",
-    COALESCE(c.categories, '') AS "book_categories",
-    COALESCE(b.description, '') AS "book_description",
+    b.id AS "book_id",
+    b.title AS "title",
+    COALESCE(a.authors, '') AS "authors",
+    COALESCE(c.categories, '') AS "categories",
+    COALESCE(b.description, '') AS "description",
     bc.isbn,
     bc.year_published,
     COALESCE(bc.place_of_publication, '') AS "place_of_publication",
     p.name AS "publisher_name",
     bc.purchase_datetime,
     bc.purchase_price,
-    -- Available if NOT issued (return_datetime IS NULL) AND NOT reserved (to_datetime >= now)
-    NOT EXISTS (
+    EXISTS (
         SELECT 1
-        FROM Issue i
+        FROM issue i
         WHERE i.book_copy_id = bc.id 
           AND COALESCE(i.return_datetime, 'infinity'::timestamp) > CURRENT_TIMESTAMP
-    ) AND NOT EXISTS (
+    ) AS "currently_issued",
+    EXISTS (
         SELECT 1
-        FROM Reservation r
+        FROM reservation r
         WHERE r.book_copy_id = bc.id 
           AND r.to_datetime >= CURRENT_TIMESTAMP
-    ) AS available
-FROM Book_copy bc
-JOIN Book b ON bc.book_id = b.id
-JOIN Publisher p ON bc.publisher_id = p.id
+    ) AS "currently_reserved"
+FROM book_copy bc
+JOIN book b ON bc.book_id = b.id
+JOIN publisher p ON bc.publisher_id = p.id
 
--- Aggregate authors for the book
+-- Aggregate authors
 LEFT JOIN (
-    SELECT ba.book_id, STRING_AGG(a.unique_name, ', ') AS authors
-    FROM Book_author ba
-    JOIN Author a ON ba.author_id = a.id
+    SELECT ba.book_id, STRING_AGG(a.unique_name, ', ' ORDER BY a.unique_name) AS "authors"
+    FROM book_author ba
+    JOIN author a ON ba.author_id = a.id
     GROUP BY ba.book_id
 ) a ON b.id = a.book_id
 
--- Aggregate categories for the book
+-- Aggregate categories
 LEFT JOIN (
-    SELECT bc.book_id, STRING_AGG(c.name, ', ') AS categories
-    FROM Book_category bc
-    JOIN Category c ON bc.category_id = c.id
+    SELECT bc.book_id, STRING_AGG(c.name, ', ' ORDER BY c.name) AS "categories"
+    FROM book_category bc
+    JOIN category c ON bc.category_id = c.id
     GROUP BY bc.book_id
 ) c ON b.id = c.book_id;
 
--- +========================+
--- | READER AGGREGATED INFO |
--- +========================+
-CREATE OR REPLACE VIEW reader_aggregated_info AS
+-- +===========+
+-- | BOOK INFO |
+-- +===========+
+CREATE OR REPLACE VIEW book_info_view AS
 SELECT
-    r.id AS reader_id,
-    r.card_no AS library_card,
+    bcv.title,
+    bcv.authors,
+    bcv.categories,
+    bcv.description,
+    bcv.isbn,
+    bcv.year_published,
+    bcv.place_of_publication,
+    bcv.publisher_name,
+    bcv.purchase_datetime,
+    bcv.purchase_price,
+    COUNT(bcv.book_id) AS "total_copies",
+    COUNT(bcv.currently_issued) AS "currently_issued_copies",
+    COUNT(bcv.currently_reserved) AS "currently_reserved_copies"
+FROM book_copy_info_view bcv
+GROUP BY bcv.book_id, bcv.title, bcv.authors, bcv.categories, bcv.description, bcv.isbn, bcv.year_published, bcv.place_of_publication, bcv.publisher_name, bcv.purchase_datetime, bcv.purchase_price;
+
+-- +=============+
+-- | READER INFO |
+-- +=============+
+CREATE OR REPLACE VIEW reader_info_view AS
+SELECT
+    r.id AS "reader_id",
+    r.card_no AS "library_card",
     COALESCE(r.first_name, '') AS "first_name",
     COALESCE(r.last_name, '') AS "last_name",
     COALESCE(total_issues.count, 0) AS "total_issues",
     COALESCE(active_issues.count, 0) AS "active_issues",
     COALESCE(total_res.count, 0) AS "total_reservations",
     COALESCE(active_res.count, 0) AS "active_reservations",
-    COALESCE(total_ratings.count, 0) AS "total_ratings",
-    COALESCE(neg_ratings.count, 0) AS "negative_ratings",
-    COALESCE(pos_ratings.count, 0) AS "positive_ratings"
-FROM Reader r
+    COALESCE(total_ratings.count, 0) AS "total_ratings"
+FROM reader r
 
 -- Total issues
 LEFT JOIN (
     SELECT reader_id, COUNT(*) AS count
-    FROM Issue
+    FROM issue
     GROUP BY reader_id
 ) total_issues ON r.id = total_issues.reader_id
 
 -- Active issues (not returned)
 LEFT JOIN (
     SELECT reader_id, COUNT(*) AS count
-    FROM Issue
+    FROM issue
     WHERE COALESCE(return_datetime, 'infinity'::timestamp) > CURRENT_TIMESTAMP
     GROUP BY reader_id
 ) active_issues ON r.id = active_issues.reader_id
@@ -138,14 +102,14 @@ LEFT JOIN (
 -- Total reservations
 LEFT JOIN (
     SELECT reader_id, COUNT(*) AS count
-    FROM Reservation
+    FROM reservation
     GROUP BY reader_id
 ) total_res ON r.id = total_res.reader_id
 
 -- Active reservations (not past)
 LEFT JOIN (
     SELECT reader_id, COUNT(*) AS count
-    FROM Reservation
+    FROM reservation
     WHERE to_datetime >= CURRENT_TIMESTAMP
     GROUP BY reader_id
 ) active_res ON r.id = active_res.reader_id
@@ -153,24 +117,42 @@ LEFT JOIN (
 -- Total ratings
 LEFT JOIN (
     SELECT reader_id, COUNT(*) AS count
-    FROM Rating
+    FROM rating
     GROUP BY reader_id
-) total_ratings ON r.id = total_ratings.reader_id
+) total_ratings ON r.id = total_ratings.reader_id;
 
--- Negative ratings (1-3)
-LEFT JOIN (
-    SELECT reader_id, COUNT(*) AS count
-    FROM Rating
-    WHERE rating <= 3
-    GROUP BY reader_id
-) neg_ratings ON r.id = neg_ratings.reader_id
+-- +======================+
+-- | ROLE PERMISSION INFO |
+-- +======================+
+CREATE OR REPLACE VIEW role_permission_info_view AS
+WITH perms_per_access AS (
+    SELECT
+        r.id AS "role_id",
+        r.name AS "role_name",
+        p.access_level::text AS "access_level",
+        STRING_AGG(p.entity, ', ' ORDER BY p.entity) AS "entities"
+    FROM app_role r
+    JOIN app_role_entity_permission rp ON r.id = rp.role_id
+    JOIN entity_permission p ON rp.permission_id = p.id
+    GROUP BY r.id, r.name, p.access_level
+)
+SELECT
+    role_id,
+    role_name,
+    STRING_AGG(access_level || ': ' || entities, '; ' ORDER BY access_level, entities) AS aggregate_permissions
+FROM perms_per_access
+GROUP BY role_id, role_name;
 
--- Positive ratings (8-10)
-LEFT JOIN (
-    SELECT reader_id, COUNT(*) AS count
-    FROM Rating
-    WHERE rating >= 8
-    GROUP BY reader_id
-) pos_ratings ON r.id = pos_ratings.reader_id;
-
-
+-- +===========+
+-- | USER INFO |
+-- +===========+
+CREATE OR REPLACE VIEW user_info_view AS
+SELECT
+    u.id AS "user_id",
+    u.username AS "username",
+    COALESCE(rd.card_no, '') AS "library_card",
+    rpiv.role_name,
+    rpiv.aggregate_permissions
+FROM app_user u
+LEFT JOIN reader rd ON u.reader_id = rd.id
+LEFT JOIN role_permission_info_view rpiv ON u.role_id = rpiv.role_id;

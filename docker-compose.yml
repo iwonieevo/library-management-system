@@ -1,34 +1,36 @@
+# docker-compose.yml
 services:
   web:
+    env_file:
+      - .env
     build: .
     ports:
-      - "${WEB_PORT}:8000"
+      - "${WEB_EXPOSED_PORT}:${WEB_INTERNAL_PORT}"
     volumes:
       - .:/app
     depends_on:
-      - db
-    env_file:
-      - .env
-
+      db:
+        condition: service_healthy
 
   db:
-    image: ${DB_IMAGE}
     env_file:
       - .env
+    image: postgres:18
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "${DB_EXPOSED_PORT}:${DB_PORT}"
+      - "${DB_EXPOSED_PORT}:${DB_INTERNAL_PORT}"
     volumes:
-      - ${POSTGRES_DATA_VOLUME}:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql
       - ./db/create_tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql
       - ./db/create_indexes.sql:/docker-entrypoint-initdb.d/02_create_indexes.sql
       - ./db/create_views.sql:/docker-entrypoint-initdb.d/03_create_views.sql
       - ./db/create_triggers.sql:/docker-entrypoint-initdb.d/04_create_triggers.sql
       - ./db/create_functions.sql:/docker-entrypoint-initdb.d/05_create_functions.sql
       - ./db/create_procedures.sql:/docker-entrypoint-initdb.d/06_create_procedures.sql
+      - ./db/seed_roles_permissions.sql:/docker-entrypoint-initdb.d/07_seed_roles_permissions.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 5s

@@ -13,32 +13,32 @@ DECLARE
     v_book_id BIGINT;
 BEGIN
     -- Insert the book
-    INSERT INTO Book(title, description)
+    INSERT INTO book(title, description)
     VALUES (p_title, p_description)
     RETURNING id INTO v_book_id;
 
     -- Check if all authors exist
     IF COALESCE(array_length(p_author_unique_names, 1), 0) IS DISTINCT FROM 
-    (SELECT COUNT(*) FROM Author WHERE unique_name = ANY(p_author_unique_names)) THEN
+    (SELECT COUNT(*) FROM author WHERE unique_name = ANY(p_author_unique_names)) THEN
         RAISE EXCEPTION 'One or more authors do not exist';
     END IF;
 
     -- Check if all categories exist
     IF COALESCE(array_length(p_category_names, 1), 0) IS DISTINCT FROM 
-    (SELECT COUNT(*) FROM Category WHERE name = ANY(p_category_names)) THEN
+    (SELECT COUNT(*) FROM category WHERE name = ANY(p_category_names)) THEN
         RAISE EXCEPTION 'One or more categories do not exist';
     END IF;
 
     -- Associate authors
-    INSERT INTO Book_author(book_id, author_id)
-    SELECT v_book_id, Author.id
-    FROM Author
+    INSERT INTO book_author(book_id, author_id)
+    SELECT v_book_id, author.id
+    FROM author
     WHERE unique_name = ANY(p_author_unique_names);
 
     -- Associate categories
-    INSERT INTO Book_category(book_id, category_id)
-    SELECT v_book_id, Category.id
-    FROM Category
+    INSERT INTO book_category(book_id, category_id)
+    SELECT v_book_id, category.id
+    FROM category
     WHERE name = ANY(p_category_names);
 END;
 $$;
@@ -60,24 +60,24 @@ DECLARE
     v_category_ids BIGINT[];
 BEGIN
     -- Check if book exists
-    IF NOT EXISTS (SELECT 1 FROM Book WHERE id = p_book_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM book WHERE id = p_book_id) THEN
         RAISE EXCEPTION 'Book with id % does not exist', p_book_id;
     END IF;
 
     -- Update title and description if provided
     IF p_title IS NOT NULL THEN
-        UPDATE Book SET title = p_title WHERE id = p_book_id;
+        UPDATE book SET title = p_title WHERE id = p_book_id;
     END IF;
 
     IF p_description IS NOT NULL THEN
-        UPDATE Book SET description = p_description WHERE id = p_book_id;
+        UPDATE book SET description = p_description WHERE id = p_book_id;
     END IF;
 
     -- Process authors if provided
     IF p_author_unique_names IS NOT NULL THEN
         -- Check if all authors exist
         SELECT COALESCE(ARRAY_AGG(id), '{}') INTO v_author_ids
-        FROM Author
+        FROM author
         WHERE unique_name = ANY(p_author_unique_names);
 
         IF array_length(v_author_ids, 1) IS DISTINCT FROM array_length(p_author_unique_names, 1) THEN
@@ -85,18 +85,18 @@ BEGIN
         END IF;
 
         -- Delete authors no longer in the list
-        DELETE FROM Book_author
+        DELETE FROM book_author
         WHERE book_id = p_book_id 
           AND author_id <> ALL(v_author_ids);
 
         -- Insert new authors not already linked
-        INSERT INTO Book_author(book_id, author_id)
-        SELECT p_book_id, Author.id
-        FROM Author
-        WHERE Author.id = ANY(v_author_ids)
+        INSERT INTO book_author(book_id, author_id)
+        SELECT p_book_id, author.id
+        FROM author
+        WHERE author.id = ANY(v_author_ids)
           AND NOT EXISTS (
-            SELECT 1 FROM Book_author
-            WHERE book_id = p_book_id AND author_id = Author.id
+            SELECT 1 FROM book_author
+            WHERE book_id = p_book_id AND author_id = author.id
           );
     END IF;
 
@@ -104,7 +104,7 @@ BEGIN
     IF p_category_names IS NOT NULL THEN
         -- Check all categories exist
         SELECT COALESCE(ARRAY_AGG(id), '{}') INTO v_category_ids
-        FROM Category
+        FROM category
         WHERE name = ANY(p_category_names);
 
         IF array_length(v_category_ids, 1) IS DISTINCT FROM array_length(p_category_names, 1) THEN
@@ -112,18 +112,18 @@ BEGIN
         END IF;
 
         -- Delete categories no longer in the list
-        DELETE FROM Book_category
+        DELETE FROM book_category
         WHERE book_id = p_book_id 
           AND category_id <> ALL(v_category_ids);
 
         -- Insert new categories not already linked
-        INSERT INTO Book_category(book_id, category_id)
-        SELECT p_book_id, Category.id
-        FROM Category
-        WHERE Category.id = ANY(v_category_ids)
+        INSERT INTO book_category(book_id, category_id)
+        SELECT p_book_id, category.id
+        FROM category
+        WHERE category.id = ANY(v_category_ids)
           AND NOT EXISTS (
-            SELECT 1 FROM Book_category
-            WHERE book_id = p_book_id AND category_id = Category.id
+            SELECT 1 FROM book_category
+            WHERE book_id = p_book_id AND category_id = category.id
           );
     END IF;
 END;

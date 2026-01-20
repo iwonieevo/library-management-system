@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Superadmin</title>
+</head>
+<body>
+<h1>Superadmin panel</h1>
+
+<ul>
+{% for table, label in tables.items() %}
+    <li><a href="/superadmin_panel/table/{{ table }}">{{ label }}</a></li>
+{% endfor %}
+</ul>
+
+</body>
+</html>
