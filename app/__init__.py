@@ -19,7 +19,6 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
-
     from .commands import register_commands
     register_commands(app)
 
