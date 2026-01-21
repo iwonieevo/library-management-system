@@ -30,7 +30,6 @@ services:
       - ./db/create_triggers.sql:/docker-entrypoint-initdb.d/04_create_triggers.sql
       - ./db/create_functions.sql:/docker-entrypoint-initdb.d/05_create_functions.sql
       - ./db/create_procedures.sql:/docker-entrypoint-initdb.d/06_create_procedures.sql
-      - ./db/seed_roles_permissions.sql:/docker-entrypoint-initdb.d/07_seed_roles_permissions.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 5s

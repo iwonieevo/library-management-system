@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import quote_plus
+from . import commands, routes
 import os
 
 db = SQLAlchemy()
@@ -20,10 +21,7 @@ def create_app():
 
     db.init_app(app)
 
-    from .commands import register_commands
-    register_commands(app)
-
-    from .routes import register_routes
-    register_routes(app)
+    commands.register_commands(app)
+    routes.register_routes(app)
 
     return app
