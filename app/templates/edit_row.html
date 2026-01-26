@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit {{ table_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+</head>
+<body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<h2>Edit {{ table_name }}</h2>
+
+<form method="post">
+  {% for col in columns %}
+    <div>
+      <label>{{ col.column_name }}</label>
+      {% if col.column_name in enum_info %}
+        <select name="{{ col.column_name }}">
+          {% for val in enum_info[col.column_name] %}
+            <option value="{{ val }}" {% if row[col.column_name] == val %}selected{% endif %}>{{ val }}</option>
+          {% endfor %}
+        </select>
+      {% elif col.column_name in fk_info %}
+        <select name="{{ col.column_name }}">
+          {% for val in fk_info[col.column_name] %}
+            <option value="{{ val }}" {% if row[col.column_name] == val %}selected{% endif %}>{{ val }}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <input name="{{ col.column_name }}" value="{{ row[col.column_name] }}" {% if col.is_nullable == 'NO' %}required{% endif %}>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <button type="submit">Save</button>
+  <a href="{{ url_for('admin_table', table_name=raw_table_name) }}">Cancel</a>
+</form>
+
+</body>
+</html>

@@ -1,0 +1,82 @@
+/* General */
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+/* Flash messages */
+.flash-messages { margin-bottom: 15px; }
+.flash {
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    font-size: 0.95em;
+}
+.flash.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.flash.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+/* Buttons */
+button, a.button {
+    padding: 6px 14px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+button:hover, a.button:hover { background-color: #0056b3; }
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background-color: white;
+}
+table, th, td { border: 1px solid #ccc; }
+th, td { padding: 8px; text-align: left; }
+th { background-color: #f0f0f0; }
+
+/* Sticky action bar */
+.action-bar {
+    position: sticky;
+    top: 0;
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+
+/* Forms */
+form div { margin-bottom: 12px; max-width: 400px; }
+label { display: block; margin-bottom: 4px; font-weight: bold; }
+input, select, textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.95em;
+    box-sizing: border-box;
+}
+select {
+    background-color: white;
+}
+
+/* Links */
+a { text-decoration: none; color: #007bff; }
+a:hover { text-decoration: underline; }
+
+/* Delete button */
+button.delete {
+    background-color: #dc3545;
+}
+button.delete:hover {
+    background-color: #a71d2a;
+}
+

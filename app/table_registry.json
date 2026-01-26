@@ -1,0 +1,18 @@
+{
+    "book": "Books",
+    "author": "Authors",
+    "category": "Categories",
+    "book_author": "Books-Authors bridge table",
+    "book_category": "Books-Categories bridge table",
+    "publisher": "Publishers",
+    "book_copy": "Book copies",
+    "reader": "Readers",
+    "reservation": "Reservations",
+    "issue": "Issues",
+    "rating": "Ratings",
+    "app_notification": "Notifications",
+    "app_role": "Roles",
+    "entity_permission": "Permissions",
+    "app_user": "Users",
+    "app_role_entity_permission": "Role permissions"
+}

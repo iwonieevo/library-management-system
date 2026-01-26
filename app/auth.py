@@ -33,7 +33,7 @@ def require_permission(entity, access_level):
                                 ON p.id = rp.permission_id
                             WHERE rp.role_id = :role_id
                                 AND p.entity = :entity
-                                AND p.access_level = :access_level
+                                AND p.access_level >= :access_level
                         )
                     """),
                     {

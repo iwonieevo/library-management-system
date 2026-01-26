@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Row - {{ table_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+</head>
+<body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<h1>Add Row to {{ table_name | capitalize }}</h1>
+
+<form method="POST">
+    <table>
+        <tbody>
+            {% for col in columns %}
+            <tr>
+                <td>{{ col.column_name }}</td>
+                <td>
+                    {% if col.column_name in enum_info %}
+                        <select name="{{ col.column_name }}">
+                            {% for value in enum_info[col.column_name] %}
+                                <option value="{{ value }}">{{ value }}</option>
+                            {% endfor %}
+                        </select>
+                    {% elif col.column_name in fk_info %}
+                        <select name="{{ col.column_name }}">
+                            {% for val in fk_info[col.column_name] %}
+                                <option value="{{ val }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <input type="text" name="{{ col.column_name }}">
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <br>
+    <button type="submit">Add Row</button>
+</form>
+
+<p><a href="{{ url_for('admin_table', table_name=raw_table_name) }}">Back to Table</a></p>
+<p><a href="{{ url_for('admin') }}">Back to Superadmin Panel</a></p>
+
+</body>
+</html>
