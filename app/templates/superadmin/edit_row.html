@@ -1,0 +1,63 @@
+{% extends "base_action_pane.html" %}
+
+{% block title %}Edit {{ table_name }}{% endblock %}
+
+{% block action_buttons %}
+<a href="{{ url_for('admin_table', table_name=raw_table_name) }}" class="button">
+    <img src="{{ url_for('static', filename='back.png') }}" class="icon" alt="Back to Table"> Back to Table
+</a>
+
+<a href="{{ url_for('admin') }}" class="button">
+    <img src="{{ url_for('static', filename='admin.png') }}" class="icon" alt="Superadmin Panel"> Superadmin Panel
+</a>
+{% endblock %}
+
+{% block content %}
+<h2>Edit {{ table_name }}</h2>
+
+<form method="post">
+  {% for col in columns %}
+    <div>
+      <label>{{ col.column_name }}</label>
+
+      {% if col.column_name in enum_info %}
+        <select name="{{ col.column_name }}">
+          {% for val in enum_info[col.column_name] %}
+            <option value="{{ val }}"
+              {% if row[col.column_name] == val %}selected{% endif %}>
+              {{ val }}
+            </option>
+          {% endfor %}
+        </select>
+
+      {% elif col.column_name in fk_info %}
+        <select name="{{ col.column_name }}">
+          {% for val in fk_info[col.column_name] %}
+            <option value="{{ val }}"
+              {% if row[col.column_name] == val %}selected{% endif %}>
+              {{ val }}
+            </option>
+          {% endfor %}
+        </select>
+
+      {% else %}
+        <input
+            name="{{ col.column_name }}"
+            value="{{ row[col.column_name] }}"
+            {% if col.is_nullable == 'NO' %}required{% endif %}
+        >
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <div style="margin-top: 15px;">
+    <button type="submit" class="button">
+      <img src="{{ url_for('static', filename='save.png') }}" class="icon" alt="Save"> Save
+    </button>
+    <a href="{{ url_for('admin_table', table_name=raw_table_name) }}"
+       class="button">
+       <img src="{{ url_for('static', filename='cancel.png') }}" class="icon" alt="Cancel"> Cancel
+    </a>
+  </div>
+</form>
+{% endblock %}

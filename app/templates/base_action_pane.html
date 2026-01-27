@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" sizes="128x128" href="{{ url_for('static', filename='library.png') }}">
+    <title>
+        {% block title %}
+            Library Management System
+        {% endblock %}
+    </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="action-bar" style="justify-content: space-between;">
+    <div>
+        <strong>Library Management System</strong>
+    </div>
+
+    <a href="{{ url_for('index') }}" class="button">
+        <img src="{{ url_for('static', filename='home.png') }}" class="icon" alt="Home"> Home
+    </a>
+
+    {% block action_buttons %}{% endblock %}
+
+    <div>
+        {% if session.get("user_id") %}
+            <span style="margin-right: 10px;">
+                Logged in as <strong>{{ session.get("username") }}</strong>
+            </span>
+            <a href="{{ url_for('logout') }}" class="button">
+                <img src="{{ url_for('static', filename='logout.png') }}" class="icon" alt="Logout"> Logout
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="button">
+                <img src="{{ url_for('static', filename='login.png') }}" class="icon" alt="Login"> Login
+            </a>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Page-specific content -->
+<div class="page-content">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

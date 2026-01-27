@@ -1,3 +1,5 @@
+-- create_indexes.sql
+
 -- https://www.postgresql.org/docs/current/indexes-types.html#INDEXES-TYPES
 
 -- Enable pg_trgm for trigram indexes

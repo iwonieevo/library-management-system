@@ -1,0 +1,53 @@
+{% extends "base_action_pane.html" %}
+
+{% block title %}{{ table_name }}{% endblock %}
+
+{% block action_buttons %}
+<a href="{{ url_for('admin_add_row', table_name=raw_table_name) }}" class="button">
+    <img src="{{ url_for('static', filename='add.png') }}" class="icon" alt="Add Row"> Add Row
+</a>
+
+<a href="{{ url_for('admin') }}" class="button">
+    <img src="{{ url_for('static', filename='admin.png') }}" class="icon" alt="Superadmin Panel"> Superadmin Panel
+</a>
+{% endblock %}
+
+{% block content %}
+<h1>{{ table_name }}</h1>
+
+<table>
+    <thead>
+        <tr>
+            {% for col in columns %}
+                <th>{{ col }}</th>
+            {% endfor %}
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            {% for col in columns %}
+                <td>{{ row[col] }}</td>
+            {% endfor %}
+            <td>
+                <a href="{{ url_for('admin_edit_row', table_name=raw_table_name, row_id=row[pk]) }}"
+                   class="button">
+                    <img src="{{ url_for('static', filename='edit.png') }}" class="icon" alt="Edit"> Edit
+                </a>
+
+                <form method="post"
+                      action="{{ url_for('admin_delete_row', table_name=raw_table_name, row_id=row[pk]) }}"
+                      style="display:inline"
+                      onsubmit="return confirm('Are you sure you want to delete this row?');">
+                    <button type="submit" class="button delete">
+                        <img src="{{ url_for('static', filename='delete.png') }}" class="icon" alt="Login"> Delete
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

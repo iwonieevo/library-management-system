@@ -1,0 +1,17 @@
+{% extends "base_action_pane.html" %}
+
+{% block title %}Superadmin Panel{% endblock %}
+
+{% block content %}
+<h1>Superadmin Panel</h1>
+
+<ul>
+  {% for table, label in tables.items() %}
+    <li>
+      <a href="{{ url_for('admin_table', table_name=table) }}">
+        {{ label }}
+      </a>
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

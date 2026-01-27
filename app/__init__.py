@@ -1,3 +1,4 @@
+# __init__.py
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import quote_plus

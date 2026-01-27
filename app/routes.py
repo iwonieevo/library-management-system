@@ -1,22 +1,32 @@
+# routes.py
 from flask import render_template, abort, session, request, redirect, url_for, flash
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.security import check_password_hash
 from . import db
 from .auth import login_required, require_superadmin
-from .utility import get_table_metadata, load_table_registry, prepare_columns
+from .utility import get_table_metadata, load_table_registry, prepare_columns, is_superadmin_role
 
 def register_routes(app):
-    RAW_TABLES = load_table_registry()
+    TABLE_REGISTRY = load_table_registry()
+
+    # Context processor for templates
+    @app.context_processor
+    def inject_user_flags():
+        return dict(is_superadmin=session.get("is_superadmin", False))
     
-    # Homepage
-    @app.route('/')
+    # Main page
+    @app.route("/")
     def index():
-        return "Welcome to our library!"
-    
+        return render_template("index.html")
+
     # Login page
     @app.route("/login", methods=["GET", "POST"])
     def login():
-        if request.method == "POST":
+        if request.method == "GET" and "user_id" in session:
+            flash("You are already logged in!", "info")
+            return redirect(url_for("index"))
+        elif request.method == "POST":
             username = request.form["username"]
             password = request.form["password"]
 
@@ -29,19 +39,19 @@ def register_routes(app):
                     """), {"username": username}
                 ).mappings().first()
 
-            if not user or not user["is_active"]:
-                flash("Invalid credentials", "error")
-                return redirect(url_for("login"))
+                if not user or not user["is_active"]:
+                    flash("Invalid credentials", "error")
+                    return redirect(url_for("login"))
 
-            from werkzeug.security import check_password_hash
-            if not check_password_hash(user["password_hash"], password):
-                flash("Invalid credentials", "error")
-                return redirect(url_for("login"))
-
-            session.clear()
-            session["user_id"] = user["id"]
-            session["username"] = user["username"]
-            session["role_id"] = user["role_id"]
+                if not check_password_hash(user["password_hash"], password):
+                    flash("Invalid credentials", "error")
+                    return redirect(url_for("login"))
+                
+                session.clear()
+                session["user_id"] = user["id"]
+                session["username"] = user["username"]
+                session["role_id"] = user["role_id"]
+                session["is_superadmin"] = is_superadmin_role(conn, user["role_id"])
 
             return redirect(url_for("index"))
 
@@ -51,26 +61,26 @@ def register_routes(app):
     @app.route("/logout")
     def logout():
         session.clear()
-        return redirect(url_for("login"))
+        return redirect(url_for("index"))
 
     # Superadmin panel
     @app.route("/superadmin_panel")
     @login_required
     @require_superadmin
     def admin():
-        return render_template("superadmin_panel.html", tables=RAW_TABLES)
+        return render_template("superadmin/superadmin_panel.html", tables=TABLE_REGISTRY)
 
     # Raw-table viewer
     @app.route("/superadmin_panel/table/<table_name>")
     @login_required
     @require_superadmin
     def admin_table(table_name):
-        if table_name not in RAW_TABLES:
+        if table_name not in TABLE_REGISTRY:
             return "Table not found", 404
 
         try:
             with db.engine.connect() as conn:
-                columns, pk, _ = get_table_metadata(conn, table_name)
+                _, pk, _ = get_table_metadata(conn, table_name)
                 result = conn.execute(text(f"SELECT * FROM {table_name}"))
                 rows = result.mappings().all()
                 column_names = result.keys()
@@ -79,8 +89,8 @@ def register_routes(app):
             return redirect(url_for("admin"))
 
         return render_template(
-            "table_list.html",
-            table_name=RAW_TABLES[table_name],
+            "superadmin/table_list.html",
+            table_name=TABLE_REGISTRY[table_name],
             raw_table_name=table_name,
             columns=column_names,
             rows=rows,
@@ -92,7 +102,7 @@ def register_routes(app):
     @login_required
     @require_superadmin
     def admin_edit_row(table_name, row_id):
-        if table_name not in RAW_TABLES:
+        if table_name not in TABLE_REGISTRY:
             abort(404)
 
         with db.engine.begin() as conn:
@@ -119,8 +129,8 @@ def register_routes(app):
                     flash(f"Failed to update row: {str(getattr(e, 'orig', e))}", "error")
 
             return render_template(
-                "edit_row.html",
-                table_name=RAW_TABLES[table_name],
+                "superadmin/edit_row.html",
+                table_name=TABLE_REGISTRY[table_name],
                 raw_table_name=table_name,
                 pk=pk,
                 row=row,
@@ -134,11 +144,11 @@ def register_routes(app):
     @login_required
     @require_superadmin
     def admin_add_row(table_name):
-        if table_name not in RAW_TABLES:
+        if table_name not in TABLE_REGISTRY:
             abort(404)
 
         with db.engine.begin() as conn:
-            columns, pk, fk_columns = get_table_metadata(conn, table_name)
+            columns, _, fk_columns = get_table_metadata(conn, table_name)
             editable_columns, fk_info, enum_info = prepare_columns(conn, columns, fk_columns)
 
             if request.method == "POST":
@@ -155,8 +165,8 @@ def register_routes(app):
                         flash(f"Failed to update row: {str(getattr(e, 'orig', e))}", "error")
 
             return render_template(
-                "add_row.html",
-                table_name=RAW_TABLES[table_name],
+                "superadmin/add_row.html",
+                table_name=TABLE_REGISTRY[table_name],
                 raw_table_name=table_name,
                 columns=editable_columns,
                 fk_info=fk_info,
@@ -168,11 +178,11 @@ def register_routes(app):
     @login_required
     @require_superadmin
     def admin_delete_row(table_name, row_id):
-        if table_name not in RAW_TABLES:
+        if table_name not in TABLE_REGISTRY:
             abort(404)
 
         with db.engine.begin() as conn:
-            columns, pk, _ = get_table_metadata(conn, table_name)
+            _, pk, _ = get_table_metadata(conn, table_name)
             if pk is None:
                 abort(400, "Table has no primary key")
 

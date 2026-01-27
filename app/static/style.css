@@ -1,3 +1,5 @@
+/* style.css */
+
 /* General */
 body {
     font-family: Arial, sans-serif;
@@ -79,4 +81,12 @@ button.delete {
 button.delete:hover {
     background-color: #a71d2a;
 }
+
+.icon {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle; /* aligns with text */
+    margin-right: 5px;      /* spacing between icon and text */
+}
+
 

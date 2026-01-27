@@ -1,0 +1,23 @@
+{% extends "base_action_pane.html" %}
+
+{% block title %}Home - Library{% endblock %}
+
+{% block content %}
+<h2>Welcome to the Library</h2>
+
+<p>
+    This system allows managing books, readers, reservations and issues.
+</p>
+
+<div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+    <a href="#" class="button">
+        <img src="{{ url_for('static', filename='search_books.png') }}" class="icon" alt="Browse Books"> Browse Books
+    </a>
+
+    {% if is_superadmin %}
+        <a href="{{ url_for('admin') }}" class="button">
+            <img src="{{ url_for('static', filename='admin.png') }}" class="icon" alt="Superadmin panel"> Superadmin panel
+        </a>
+    {% endif %}
+</div>
+{% endblock %}

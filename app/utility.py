@@ -1,6 +1,8 @@
+# utility.py
 from sqlalchemy import text
 from pathlib import Path
 import json
+import os
 
 def get_table_metadata(conn, table_name):
     # Get all columns
@@ -92,3 +94,16 @@ def load_table_registry():
     with open(TABLES_FILE) as f:
         tables = json.load(f)
     return tables
+
+# Helper function: is role a superadmin
+def is_superadmin_role(conn, role_id):
+    return conn.execute(
+        text("""
+            SELECT :role_id = get_role_id(:superadmin_role)
+        """),
+        {
+            "role_id": role_id,
+            "superadmin_role": os.getenv("APP_SUPERADMIN_ROLE", "superadmin"),
+        }
+    ).scalar()
+    
