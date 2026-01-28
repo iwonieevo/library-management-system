@@ -29,12 +29,53 @@
             <span style="margin-right: 10px;">
                 Logged in as <strong>{{ session.get("username") }}</strong>
             </span>
-            <a href="{{ url_for('logout') }}" class="button">
+            <a href="{{ url_for('logout') }}" class="button" style="margin-right:10px;">
                 <img src="{{ url_for('static', filename='logout.png') }}" class="icon" alt="Logout"> Logout
             </a>
+
+            {% if notifications is defined %}
+            <div class="notification-wrapper" style="margin-left: 12px; display: inline-block;">
+                <!-- Toggle for dropdown -->
+                <input type="checkbox" id="notif-toggle" hidden>
+
+                <!-- Bell icon -->
+                <label for="notif-toggle" class="notification-bell">
+                    <img src="{{ url_for('static', filename='bell.png') }}" class="icon" alt="Notifications">
+
+                    {% if unread_count > 0 %}
+                    <span class="notification-dot">{{ unread_count }}</span>
+                    {% endif %}
+                </label>
+
+                <!-- Dropdown -->
+                <div class="notification-dropdown">
+                    {% if notifications %}
+                    <div class="notification-list" style="max-height: 250px; overflow-y: auto;">
+                        {% for n in notifications %}
+                        <div class="notification-card {% if not n.read %}unread{% endif %}" style="padding: 8px 10px;">
+                            <div class="notif-content">
+                                <span class="timestamp">{{ n.sent_datetime.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+                                <span class="subject">{{ n.subject }}</span>
+                                <p class="body">{{ n.body }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="empty" style="padding: 10px;">No notifications</p>
+                    {% endif %}
+
+                    <a href="{{ url_for('notifications') }}" class="view-more">View all notifications</a>
+                </div>
+            </div>
+            {% endif %}
+
         {% else %}
             <a href="{{ url_for('login') }}" class="button">
                 <img src="{{ url_for('static', filename='login.png') }}" class="icon" alt="Login"> Login
+            </a>
+            <a href="{{ url_for('register') }}" class="button">
+                <img src="{{ url_for('static', filename='register.png') }}" class="icon" alt="Register"> Register
             </a>
         {% endif %}
     </div>

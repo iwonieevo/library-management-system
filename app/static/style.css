@@ -1,12 +1,15 @@
 /* style.css */
 
-/* General */
+/* -------------------- General -------------------- */
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
-    background-color: #f9f9f9;
+    background-color: white;
     color: #333;
 }
+
+a { text-decoration: none; color: #007bff; }
+a:hover { text-decoration: underline; }
 
 /* Flash messages */
 .flash-messages { margin-bottom: 15px; }
@@ -16,77 +19,210 @@ body {
     margin-bottom: 5px;
     font-size: 0.95em;
 }
-.flash.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.flash.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.flash.success { background-color: lightgreen; color: darkgreen; border: 1px solid black; }
+.flash.error { background-color: lightcoral; color: darkred; border: 1px solid black; }
+.flash.warning { background-color: lightyellow; color: darkgoldenrod; border: 1px solid black}
 
-/* Buttons */
+/* -------------------- Buttons -------------------- */
 button, a.button {
     padding: 6px 14px;
-    background-color: #007bff;
+    background-color: #4444ec;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    text-decoration: none;
     font-size: 0.9em;
 }
-button:hover, a.button:hover { background-color: #0056b3; }
+button:hover, a.button:hover { background-color: #1818c9; }
 
-/* Tables */
+button.delete { background-color: red; }
+button.delete:hover { background-color: darkred; }
+
+/* -------------------- Tables -------------------- */
 table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
     background-color: white;
 }
-table, th, td { border: 1px solid #ccc; }
+table, th, td { border: 1px solid lightgray; }
 th, td { padding: 8px; text-align: left; }
-th { background-color: #f0f0f0; }
+th { background-color: #f9f9f9; }
 
-/* Sticky action bar */
+/* -------------------- Sticky Action Bar -------------------- */
 .action-bar {
     position: sticky;
     top: 0;
-    background-color: #f0f0f0;
+    background-color: white;
     padding: 10px;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid lightgray;
     display: flex;
     gap: 10px;
+    align-items: center;
     z-index: 1000;
 }
 
-/* Forms */
+/* -------------------- Forms -------------------- */
 form div { margin-bottom: 12px; max-width: 400px; }
 label { display: block; margin-bottom: 4px; font-weight: bold; }
 input, select, textarea {
     width: 100%;
     padding: 6px 8px;
-    border: 1px solid #ccc;
+    border: 1px solid lightgray;
     border-radius: 4px;
     font-size: 0.95em;
     box-sizing: border-box;
+    white-space: pre-wrap; /* preserve line breaks in input */
 }
-select {
-    background-color: white;
-}
+select { background-color: white; }
 
-/* Links */
-a { text-decoration: none; color: #007bff; }
-a:hover { text-decoration: underline; }
-
-/* Delete button */
-button.delete {
-    background-color: #dc3545;
-}
-button.delete:hover {
-    background-color: #a71d2a;
-}
-
+/* -------------------- Icons -------------------- */
 .icon {
-    width: 14px;
-    height: 14px;
-    vertical-align: middle; /* aligns with text */
-    margin-right: 5px;      /* spacing between icon and text */
+    width: 15px;
+    height: 15px;
+    vertical-align: middle;
+    margin-right: 5px;
 }
 
+/* -------------------- Notifications: Bell -------------------- */
+.notification-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-left: 12px; /* spacing from logout */
+}
 
+.notification-bell {
+    cursor: pointer;
+    display: inline-block;
+    position: relative;
+}
+
+.notification-bell .icon {
+    width: 28px;
+    height: 28px;
+}
+
+.notification-dot {
+    min-width: 20px;
+    height: 20px;
+    font-size: 12px;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    line-height: 20px;
+    background: red;
+    border-radius: 50%;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+}
+
+/* -------------------- Notifications Dropdown -------------------- */
+.notification-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: 350px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+}
+
+#notif-toggle:checked + label + .notification-dropdown {
+    display: block;
+}
+
+.notification-dropdown .notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.notification-dropdown li.empty {
+    padding: 10px;
+    text-align: center;
+}
+
+.view-more {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    border-top: 1px solid #ddd;
+}
+
+/* -------------------- Notification Cards (Page & Dropdown) -------------------- */
+.notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.notification-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fafafa;
+}
+
+.notification-card.unread {
+    background: #e6f0ff;
+}
+
+.notif-toggle-form {
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+.read-toggle-btn {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.read-icon {
+    width: 32px;
+    height: 32px;
+    transition: transform 0.1s ease, filter 0.1s ease;
+}
+.read-toggle-btn:hover .read-icon {
+    filter: brightness(0.8);
+    transform: scale(1.1);
+}
+.read-toggle-btn:active .read-icon {
+    filter: brightness(0.6);
+    transform: scale(1);
+}
+
+/* -------------------- Notification Content -------------------- */
+.notif-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notif-content .timestamp {
+    font-size: 0.75em;
+    color: gray;
+}
+
+.notif-content .subject {
+    font-size: 1.1em;
+    font-weight: bold;
+    white-space: pre-wrap; /* preserve line breaks */
+}
+
+.notif-content .body {
+    font-size: 0.9em;
+    white-space: pre-wrap; /* preserve line breaks */
+}

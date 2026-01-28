@@ -64,10 +64,10 @@ CREATE TABLE IF NOT EXISTS book_copy (
 
 CREATE TABLE IF NOT EXISTS reader (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    card_no VARCHAR(20) NOT NULL UNIQUE,
+    card_no VARCHAR(15) NOT NULL UNIQUE,
     first_name TEXT,
     last_name TEXT,
-    CONSTRAINT card_no_fixed_length CHECK (LENGTH(card_no) = 20)
+    CONSTRAINT card_no_fixed_length CHECK (LENGTH(card_no) = 15)
 );
 
 CREATE TABLE IF NOT EXISTS reservation (
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS rating (
 
 CREATE TABLE IF NOT EXISTS app_notification (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    sent_datetime TIMESTAMP NOT NULL,
+    sent_datetime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     reader_id BIGINT NOT NULL,
     subject TEXT NOT NULL,
     body TEXT NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS app_user (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role_id BIGINT NOT NULL,
+    role_id BIGINT,
     reader_id BIGINT UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

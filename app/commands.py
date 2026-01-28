@@ -24,8 +24,8 @@ def register_commands(app):
             )
             conn.execute(
                 text("""
-                    INSERT INTO app_user (username, password_hash, role_id)
-                    VALUES (:username, :pswd_hash, get_role_id(:superadmin_role))
+                    INSERT INTO app_user (username, password_hash, role_id, is_active)
+                    VALUES (:username, :pswd_hash, get_role_id(:superadmin_role), true)
                     ON CONFLICT (username) DO UPDATE
                         SET
                             password_hash = EXCLUDED.password_hash,

@@ -1,8 +1,10 @@
 # routes.py
-from flask import render_template, abort, session, request, redirect, url_for, flash
+from flask import render_template, session, request, redirect, url_for, flash
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
+from datetime import datetime
+import random
 from . import db
 from .auth import login_required, require_superadmin
 from .utility import get_table_metadata, load_table_registry, prepare_columns, is_superadmin_role
@@ -10,10 +12,51 @@ from .utility import get_table_metadata, load_table_registry, prepare_columns, i
 def register_routes(app):
     TABLE_REGISTRY = load_table_registry()
 
-    # Context processor for templates
+    # Context processor for templates: user flags
     @app.context_processor
     def inject_user_flags():
         return dict(is_superadmin=session.get("is_superadmin", False))
+    
+    # Context processor for templates: notifications
+    @app.context_processor
+    def inject_notifications():
+        if "card_no" not in session or "user_id" not in session:
+            return {}
+
+        try:
+            with db.engine.connect() as conn:
+                reader_id = conn.execute(text("""SELECT reader_id FROM app_user WHERE app_user.id = :user_id LIMIT 1"""), {"user_id": session["user_id"]}).scalar_one_or_none()
+
+                if not reader_id:
+                    return {}
+
+                notifications = conn.execute(
+                    text("""
+                        SELECT id, sent_datetime, subject, body, read
+                        FROM app_notification
+                        WHERE reader_id = :reader_id
+                        ORDER BY sent_datetime DESC
+                        LIMIT 11
+                    """),
+                    {"reader_id": reader_id}
+                ).mappings().all()
+
+                unread_count = conn.execute(
+                text("""
+                        SELECT COUNT(*) 
+                        FROM app_notification
+                        WHERE reader_id = :reader_id AND read = FALSE
+                    """), {"reader_id": reader_id}
+                ).scalar_one()
+
+                return {
+                    "notifications": notifications[:10],
+                    "has_more": len(notifications) > 10,
+                    "unread_count": unread_count
+                }
+
+        except SQLAlchemyError:
+            return {}
     
     # Main page
     @app.route("/")
@@ -24,7 +67,7 @@ def register_routes(app):
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "GET" and "user_id" in session:
-            flash("You are already logged in!", "info")
+            flash("You are already logged in!", "warning")
             return redirect(url_for("index"))
         elif request.method == "POST":
             username = request.form["username"]
@@ -33,14 +76,15 @@ def register_routes(app):
             with db.engine.connect() as conn:
                 user = conn.execute(
                     text("""
-                        SELECT id, username, password_hash, role_id, is_active
+                        SELECT app_user.id, app_user.username, app_user.password_hash, app_user.role_id, app_user.is_active, reader.card_no
                         FROM app_user
-                        WHERE username = :username
+                        LEFT JOIN reader ON reader.id = app_user.reader_id
+                        WHERE app_user.username = :username
                     """), {"username": username}
                 ).mappings().first()
 
                 if not user or not user["is_active"]:
-                    flash("Invalid credentials", "error")
+                    flash("User isn't active or doesn't exist", "error")
                     return redirect(url_for("login"))
 
                 if not check_password_hash(user["password_hash"], password):
@@ -52,6 +96,7 @@ def register_routes(app):
                 session["username"] = user["username"]
                 session["role_id"] = user["role_id"]
                 session["is_superadmin"] = is_superadmin_role(conn, user["role_id"])
+                session["card_no"] = user["card_no"]
 
             return redirect(url_for("index"))
 
@@ -62,6 +107,80 @@ def register_routes(app):
     def logout():
         session.clear()
         return redirect(url_for("index"))
+    
+    # Register page
+    @app.route("/register", methods=["GET", "POST"])
+    def register():
+        if request.method == "GET" and "user_id" in session:
+            flash("You are already logged in!", "warning")
+            return redirect(url_for("index"))
+        elif request.method == "POST":
+            first_name = request.form.get("first_name", "").strip()
+            last_name = request.form.get("last_name", "").strip()
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            confirm_password = request.form.get("confirm_password")
+
+            if not all([first_name, last_name, username, password, confirm_password]):
+                flash("All fields are required", "error")
+                return redirect(url_for("register"))
+
+            if password != confirm_password:
+                flash("Passwords do not match", "error")
+                return redirect(url_for("register"))
+
+            password_hash = generate_password_hash(password)
+
+            # card_no: YYYYMMDDHHMM + random 3 digits -> length = 15
+            now = datetime.now()
+            card_no = f"{now:%Y%m%d%H%M}{random.randint(0, 999):03d}"
+
+            try:
+                with db.engine.begin() as conn:
+                    # check username uniqueness
+                    existing = conn.execute(
+                        text("SELECT 1 FROM app_user WHERE username = :username"),
+                        {"username": username}
+                    ).first()
+
+                    if existing:
+                        flash("This username is already in use", "error")
+                        return redirect(url_for("register"))
+
+                    # create reader
+                    reader_id = conn.execute(
+                        text("""
+                            INSERT INTO reader (first_name, last_name, card_no)
+                            VALUES (:first_name, :last_name, :card_no)
+                            RETURNING id
+                        """),
+                        {
+                            "first_name": first_name,
+                            "last_name": last_name,
+                            "card_no": card_no
+                        }
+                    ).scalar_one()
+
+                    # create app_user (no role assigned)
+                    conn.execute(
+                        text("""
+                            INSERT INTO app_user (username, password_hash, reader_id, is_active)
+                            VALUES (:username, :password_hash, :reader_id, true)
+                        """),
+                        {
+                            "username": username,
+                            "password_hash": password_hash,
+                            "reader_id": reader_id
+                        }
+                    )
+
+                flash("Registration successful. You can now log in.", "success")
+                return redirect(url_for("login"))
+
+            except SQLAlchemyError as e:
+                flash(f"Registration failed: {str(getattr(e, 'orig', e))}", "error")
+
+        return render_template("register.html")
 
     # Superadmin panel
     @app.route("/superadmin_panel")
@@ -76,7 +195,8 @@ def register_routes(app):
     @require_superadmin
     def admin_table(table_name):
         if table_name not in TABLE_REGISTRY:
-            return "Table not found", 404
+            flash(f"The table doesn't exist", "error")
+            return redirect(url_for("admin"))
 
         try:
             with db.engine.connect() as conn:
@@ -103,16 +223,19 @@ def register_routes(app):
     @require_superadmin
     def admin_edit_row(table_name, row_id):
         if table_name not in TABLE_REGISTRY:
-            abort(404)
+            flash(f"The table doesn't exist", "error")
+            return redirect(url_for("admin"))
 
         with db.engine.begin() as conn:
             columns, pk, fk_columns = get_table_metadata(conn, table_name)
             if pk is None:
-                abort(400, "Table has no primary key")
+                flash(f"The table doesn't have a PK", "error")
+                return redirect(url_for("admin"))
 
             row = conn.execute(text(f"SELECT * FROM {table_name} WHERE {pk} = :id"), {"id": row_id}).mappings().first()
             if not row:
-                abort(404)
+                flash(f"The row doesn't exist", "error")
+                return redirect(url_for("admin"))
 
             editable_columns, fk_info, enum_info = prepare_columns(conn, columns, fk_columns)
 
@@ -145,14 +268,23 @@ def register_routes(app):
     @require_superadmin
     def admin_add_row(table_name):
         if table_name not in TABLE_REGISTRY:
-            abort(404)
+            flash(f"The table doesn't exist", "error")
+            return redirect(url_for("admin"))
 
         with db.engine.begin() as conn:
             columns, _, fk_columns = get_table_metadata(conn, table_name)
             editable_columns, fk_info, enum_info = prepare_columns(conn, columns, fk_columns)
 
+            insert_data = {}
             if request.method == "POST":
-                insert_data = {col["column_name"]: request.form.get(col["column_name"]) or None for col in editable_columns}
+                for col in editable_columns:
+                    name = col["column_name"]
+                    value = request.form.get(name)
+
+                    if value == "" or value is None:
+                        continue
+
+                    insert_data[name] = value
 
                 if insert_data:
                     cols_str = ", ".join(insert_data.keys())
@@ -179,12 +311,14 @@ def register_routes(app):
     @require_superadmin
     def admin_delete_row(table_name, row_id):
         if table_name not in TABLE_REGISTRY:
-            abort(404)
+            flash(f"The table doesn't exist", "error")
+            return redirect(url_for("admin"))
 
         with db.engine.begin() as conn:
             _, pk, _ = get_table_metadata(conn, table_name)
             if pk is None:
-                abort(400, "Table has no primary key")
+                flash(f"The table doesn't have a PK", "error")
+                return redirect(url_for("admin"))
 
             try:
                 conn.execute(text(f"DELETE FROM {table_name} WHERE {pk} = :id"), {"id": row_id})
@@ -193,4 +327,54 @@ def register_routes(app):
                 flash(f"Failed to delete row: {str(getattr(e, 'orig', e))}", "error")
 
         return redirect(url_for("admin_table", table_name=table_name))
+    
+    # All user notifications page
+    @app.route("/notifications")
+    @login_required
+    def notifications():
+        if "card_no" not in session:
+            flash(f"Your user doesn't have a library card number", "error")
+            return redirect(url_for("index"))
 
+        with db.engine.begin() as conn:
+            reader_id = conn.execute(text("""SELECT reader_id FROM app_user WHERE app_user.id = :user_id LIMIT 1"""), {"user_id": session["user_id"]}).scalar_one_or_none()
+
+            if not reader_id:
+                flash(f"Your user doesn't have a library card number", "error")
+                return redirect(url_for("index"))
+
+            notifications = conn.execute(
+                text("""
+                    SELECT id, sent_datetime, subject, body, read
+                    FROM app_notification
+                    WHERE reader_id = :reader_id
+                    ORDER BY sent_datetime DESC
+                """),
+                {"reader_id": reader_id}
+            ).mappings().all()
+
+        return render_template(
+            "notifications.html",
+            notifications=notifications
+        )
+    
+    # Toggle read/unread for a single notification
+    @app.route("/notification/<int:notif_id>/toggle", methods=["POST"])
+    @login_required
+    def toggle_notification_read(notif_id):
+        with db.engine.begin() as conn:
+            current = conn.execute(
+                text("SELECT read FROM app_notification WHERE id = :id"),
+                {"id": notif_id}
+            ).scalar_one_or_none()
+
+            if current is None:
+                flash("Notification not found", "error")
+                return redirect(url_for("notifications"))
+
+            conn.execute(
+                text("UPDATE app_notification SET read = :new WHERE id = :id"),
+                {"new": not current, "id": notif_id}
+            )
+
+        return redirect(url_for("notifications"))

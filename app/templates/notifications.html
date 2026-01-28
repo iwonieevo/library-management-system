@@ -1,0 +1,32 @@
+{% extends "base_action_pane.html" %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<h2>Your Notifications</h2>
+
+{% if notifications %}
+<div class="notification-list">
+    {% for n in notifications %}
+    <div class="notification-card {% if not n.read %}unread{% endif %}">
+        <!-- Read/unread toggle -->
+        <form method="POST" action="{{ url_for('toggle_notification_read', notif_id=n.id) }}" class="notif-toggle-form">
+            <button type="submit" class="read-toggle-btn">
+                <img src="{{ url_for('static', filename='read.png') if n.read else url_for('static', filename='unread.png') }}" 
+                     alt="{{ 'Read' if n.read else 'Unread' }}" class="read-icon">
+            </button>
+        </form>
+
+        <!-- Notification content -->
+        <div class="notif-content">
+            <span class="timestamp">{{ n.sent_datetime.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+            <span class="subject">{{ n.subject }}</span>
+            <p class="body">{{ n.body }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>No notifications.</p>
+{% endif %}
+{% endblock %}
