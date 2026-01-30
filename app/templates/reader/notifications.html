@@ -8,7 +8,7 @@
 {% if notifications %}
 <div class="notification-list">
     {% for n in notifications %}
-    <div class="notification-card {% if not n.read %}unread{% endif %}">
+    <div id="notif-{{ n.id }}" class="notification-card {% if not n.read %}unread{% endif %}">
         <!-- Read/unread toggle -->
         <form method="POST" action="{{ url_for('toggle_notification_read', notif_id=n.id) }}" class="notif-toggle-form">
             <button type="submit" class="read-toggle-btn">
@@ -19,7 +19,7 @@
 
         <!-- Notification content -->
         <div class="notif-content">
-            <span class="timestamp">{{ n.sent_datetime.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+            <span class="timestamp">{{ n.sent_datetime.strftime("%Y-%m-%d %H:%M") }}</span>
             <span class="subject">{{ n.subject }}</span>
             <p class="body">{{ n.body }}</p>
         </div>

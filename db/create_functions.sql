@@ -23,6 +23,52 @@ BEGIN
 END;
 $$;
 
+-- +==============================+
+-- | GET AUTHOR_ID BY UNIQUE_NAME |
+-- +==============================+
+CREATE OR REPLACE FUNCTION get_author_id(p_unique_name TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_author_id BIGINT;
+BEGIN
+    SELECT id INTO v_author_id
+    FROM author
+    WHERE unique_name = p_unique_name
+    LIMIT 1;
+
+    IF v_author_id IS NULL THEN
+        RAISE EXCEPTION 'Author "%" does not exist', p_unique_name;
+    END IF;
+
+    RETURN v_author_id;
+END;
+$$;
+
+-- +=========================+
+-- | GET CATEGORY_ID BY NAME |
+-- +=========================+
+CREATE OR REPLACE FUNCTION get_category_id(p_name TEXT)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_category_id BIGINT;
+BEGIN
+    SELECT id INTO v_category_id
+    FROM category
+    WHERE name = p_name
+    LIMIT 1;
+
+    IF v_category_id IS NULL THEN
+        RAISE EXCEPTION 'Category "%" does not exist', p_name;
+    END IF;
+
+    RETURN v_category_id;
+END;
+$$;
+
 -- +==========================+
 -- | GET PUBLISHER_ID BY NAME |
 -- +==========================+

@@ -54,37 +54,40 @@ def get_table_metadata(conn, table_name):
 
     return columns, pk, fk_columns
 
-# Helper to prepare editable columns, FK values, and enum options
+# Helper to prepare editable columns, FK values, and dropdown options
 def prepare_columns(conn, columns, fk_columns):
     editable_columns = [
         col for col in columns
         if col['is_identity'] != 'YES'
     ]
 
-    fk_info = {}
-    enum_info = {}
+    fk_cols = {}
+    dropdown_cols = {}
 
     for col in editable_columns:
         col_name = col["column_name"]
+        col_data_type = col["data_type"]
 
         if col_name in fk_columns:
             ref_table = fk_columns[col_name]["ref_table"]
             ref_column = fk_columns[col_name]["ref_column"]
-            fk_info[col_name] = conn.execute(text(f"SELECT {ref_column} FROM {ref_table}")).scalars().all()
+            fk_cols[col_name] = conn.execute(text(f"SELECT {ref_column} FROM {ref_table}")).scalars().all()
 
-        enum_type = col.get('udt_name', None)
-        if enum_type:
+        if col_data_type == "USER-DEFINED":
             rows = conn.execute(text("""
                 SELECT enumlabel, enumsortorder
                 FROM pg_enum
                 JOIN pg_type ON pg_type.oid = pg_enum.enumtypid
                 WHERE pg_type.typname = :enum_type
-            """), {"enum_type": enum_type}).all()
+            """), {"enum_type": col.get('udt_name', None)}).all()
             enum_values = [row[0] for row in sorted(rows, key=lambda r: r[1])]
             if enum_values:
-                enum_info[col_name] = enum_values
+                dropdown_cols[col_name] = enum_values
 
-    return editable_columns, fk_info, enum_info
+        if col_data_type == "boolean":
+            dropdown_cols[col_name] = ["True", "False"]
+
+    return editable_columns, fk_cols, dropdown_cols
 
 
 def load_table_registry():

@@ -1,35 +1,24 @@
 # Library Management System
-This project was created as part of the Databases course at Wrocław University of Science and Technology. It is a web-based library management system built with Flask and PostgreSQL, containerized with Docker. The system allows managing books, authors, categories, publishers, readers, reservations, issues, ratings, and user permissions through a structured database and web interface.
+**Disclaimer:** This project was created as part of the Databases course at Wrocław University of Science and Technology.
 
-## Technologies Used
-- **Backend:** Flask (Python web framework)
+A web-based library management system built with Flask and PostgreSQL, containerized with Docker. This system manages books, authors, categories, publishers, readers, reservations, issues, ratings, and user permissions through a structured database and web interface.
 
-- **Database:** PostgreSQL (with PL/pgSQL functions, triggers, views, and indexes)
-
+## Technologies
+- **Backend:** Flask (Python)
+- **Database:** PostgreSQL with PL/pgSQL
 - **Containerization:** Docker & Docker Compose
-
 - **ORM:** SQLAlchemy
-
 - **Frontend:** HTML templates with CSS styling
 
-## System Overview
-The system consists of a Flask web application connected to a PostgreSQL database. Key features include:
-
-- **Database Schema:** Well-structured tables for books, authors, categories, publishers, readers, reservations, issues, ratings, users, roles, and permissions
-
-- **Data Integrity:** Constraints, foreign keys, triggers to prevent overlapping reservations/issues
-
-- **Performance:** Optimized indexes including GIN trigram indexes for text search and BRIN indexes for time-series data
-
-- **Stored Procedures:** PL/pgSQL functions and procedures for common operations
-
-- **Views:** Predefined views for book info, reader info, user info, and role permissions
-
-- **Authentication:** User login system with role-based permissions
-
-- **Admin Interface:** Superadmin panel for direct table management (CRUD operations)
-
-- **CLI Tools:** Commands for creating superadmin users and syncing permissions
+## Features
+- **Complete Database Schema:** 16 normalized tables with constraints
+- **Data Integrity:** Triggers prevent overlapping reservations/issues
+- **Performance:** GIN trigram indexes for text search, BRIN for time-series
+- **Business Logic:** PL/pgSQL functions and stored procedures
+- **Predefined Views:** For book info, reader info, user info, and permissions
+- **Authentication:** RBAC (Role Based Access Control)
+- **Admin Interface:** Superadmin panel for direct table management
+- **CLI Tools:** Commands for user management and permission syncing
 
 ## Project Structure
 ```
@@ -43,13 +32,13 @@ library-management-system/
 │   ├── routes.py              # Route definitions
 │   ├── table_registry.json    # Table name mappings
 │   └── utility.py             # Helper functions
-├── db/                        # Database schema files
+├── db/                        # Database schema
 │   ├── create_tables.sql      # Table definitions
-│   ├── create_indexes.sql     # Performance indexes
-│   ├── create_views.sql       # Database views
-│   ├── create_triggers.sql    # Data integrity triggers
-│   ├── create_functions.sql   # Helper functions
-│   └── create_procedures.sql  # Stored procedures
+│   ├── create_indexes.sql     # Indexes
+│   ├── create_views.sql       # Views
+│   ├── create_triggers.sql    # Triggers
+│   ├── create_functions.sql   # Functions
+│   └── create_procedures.sql  # Procedures
 ├── .env.example               # Environment template
 ├── docker-compose.yml         # Docker services
 ├── Dockerfile                 # Web service image
@@ -83,15 +72,6 @@ Use Docker Compose to build and start the application:
 docker-compose up --build
 ```
 
-This command will:
-
-- Build the Flask web application image
-
-- Start a PostgreSQL database container
-
-- Initialize the database with all schema files
-
-- Start the web application on the configured port
 
 ### 4. Initialize the Superadmin Account
 
@@ -129,35 +109,11 @@ The following environment variables can be configured in the `.env` file:
 | `FLASK_APP` | Flask application entry point | `app:create_app` |
 | `APP_SUPERADMIN_ROLE` | Name of the superadmin role | `superadmin` |
 
-## Database Features
-
-### Schema Design
+## Database schema
 The database includes 16 tables with proper normalization, foreign key constraints, and data validation rules.
-
 ![ERD](ERD.jpg)
 
-### Performance Optimizations
-- GIN trigram indexes for text search on book titles, descriptions, author names, etc.
-
-- BRIN index for time-series data (notifications)
-
-- B-tree indexes on foreign keys and frequently queried columns
-
-### Data Integrity
-- Triggers prevent overlapping book reservations and issues
-
-- Check constraints ensure data validity (ISBN format, price non-negative, date ordering)
-
-- Cascading deletes where appropriate, restricted deletes where needed
-
-### Business Logic
-- PL/pgSQL functions for common lookups (get book ID by title, get publisher ID by name, etc.)
-
-- Stored procedures for complex operations (add/update books with authors and categories)
-
-- Materialized views for reporting and dashboards
-
-### Database Reset
+## Database Reset
 
 To completely reset the database:
 

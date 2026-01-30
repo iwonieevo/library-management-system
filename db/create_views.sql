@@ -27,11 +27,11 @@ SELECT
         SELECT 1
         FROM reservation r
         WHERE r.book_copy_id = bc.id 
-          AND r.to_datetime >= CURRENT_TIMESTAMP
+          AND r.to_datetime > CURRENT_TIMESTAMP
     ) AS "currently_reserved"
-FROM book_copy bc
-JOIN book b ON bc.book_id = b.id
-JOIN publisher p ON bc.publisher_id = p.id
+FROM book b
+LEFT JOIN book_copy bc ON bc.book_id = b.id
+LEFT JOIN publisher p ON bc.publisher_id = p.id
 
 -- Aggregate authors
 LEFT JOIN (
@@ -54,21 +54,18 @@ LEFT JOIN (
 -- +===========+
 CREATE OR REPLACE VIEW book_info_view AS
 SELECT
+    bcv.book_id,
     bcv.title,
     bcv.authors,
     bcv.categories,
     bcv.description,
-    bcv.isbn,
-    bcv.year_published,
-    bcv.place_of_publication,
-    bcv.publisher_name,
-    bcv.purchase_datetime,
-    bcv.purchase_price,
-    COUNT(bcv.book_id) AS "total_copies",
-    COUNT(bcv.currently_issued) AS "currently_issued_copies",
-    COUNT(bcv.currently_reserved) AS "currently_reserved_copies"
+    COUNT(bcv.book_copy_id) AS "total_copies",
+    COUNT(CASE WHEN bcv.currently_issued = TRUE THEN 1 ELSE NULL END) AS "currently_issued_copies",
+    COUNT(CASE WHEN bcv.currently_reserved = TRUE THEN 1 ELSE NULL END) AS "currently_reserved_copies",
+    FLOOR(AVG(r.rating))::INT AS avg_rating
 FROM book_copy_info_view bcv
-GROUP BY bcv.book_id, bcv.title, bcv.authors, bcv.categories, bcv.description, bcv.isbn, bcv.year_published, bcv.place_of_publication, bcv.publisher_name, bcv.purchase_datetime, bcv.purchase_price;
+LEFT JOIN rating r ON r.book_id = bcv.book_id
+GROUP BY bcv.book_id, bcv.title, bcv.authors, bcv.categories, bcv.description;
 
 -- +=============+
 -- | READER INFO |

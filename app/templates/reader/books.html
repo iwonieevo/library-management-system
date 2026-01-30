@@ -1,0 +1,131 @@
+{% extends "base_action_pane.html" %}
+
+{% block title %}Browse Books{% endblock %}
+
+{% block content %}
+
+<h2>Browse Books</h2>
+
+<!-- Search help -->
+<div class="search-help" style="margin-bottom: 1.5em;">
+    <p style="margin-bottom: 1em;">
+        <img src="{{ url_for('static', filename='search.png') }}" alt="search" class="icon">
+        <strong>Advanced search</strong><br><br>
+        All text fields support multiple search terms separated with <code>||</code>.<br>
+        Example: <code>horror||fantasy</code>
+    </p>
+    <p class="search-note" style="margin-top: 1em;">
+        Terms within a single criterion (e.g., Title) are combined using the <strong>OR</strong> operator. 
+        Different criteria are combined using <strong>AND</strong>.<br><br>
+        <strong>Tips:</strong><br>
+        - <code>_</code> matches any single character<br>
+        - <code>%</code> matches any sequence of zero or more characters<br>
+        The search is case-insensitive.
+    </p>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="book-filters">
+
+    <div class="filter-row">
+        <label>Title</label>
+        <input type="text" name="title" value="{{ filters.get('title', '') }}">
+    </div>
+
+    <div class="filter-row">
+        <label>Authors</label>
+        <input type="text" name="authors" value="{{ filters.get('authors', '') }}">
+    </div>
+
+    <div class="filter-row">
+        <label>Categories</label>
+        <input type="text" name="categories" value="{{ filters.get('categories', '') }}">
+    </div>
+
+    <div class="filter-row">
+        <label>Description</label>
+        <input type="text" name="description" value="{{ filters.get('description', '') }}">
+    </div>
+
+    <div class="filter-row checkbox-row">
+        <label>
+            <input type="checkbox" name="available_only" value="1"
+                   {% if filters.get('available_only') == '1' %}checked{% endif %}>
+            Show only available books
+        </label>
+    </div>
+
+    <div class="filter-actions">
+        <button type="submit">Search</button>
+        <a href="{{ url_for('browse_books') }}" class="button">Reset</a>
+    </div>
+</form>
+
+<hr>
+
+<!-- Results -->
+{% if books %}
+<div class="book-list">
+    {% for b in books %}
+    <div class="book-card">
+
+        <div class="book-header">
+            <div class="book-title">{{ b.title }}</div>
+        </div>
+
+        {% if b.authors %}
+            <div class="book-authors">{{ b.authors }}</div>
+        {% endif %}
+
+        {% if b.categories %}
+            <div class="book-categories">{{ b.categories }}</div>
+        {% endif %}
+
+        {% if b.description %}
+            <div class="book-description">{{ b.description }}</div>
+        {% endif %}
+
+        <div class="book-meta">
+            <span>Total copies: {{ b.total_copies }}</span>
+            <span>Issued: {{ b.currently_issued_copies }}</span>
+            <span>Reserved: {{ b.currently_reserved_copies }}</span>
+
+            {% if b.avg_rating %}
+                {% set stars = b.avg_rating|int %}
+                {% if stars < 1 %}{% set stars = 1 %}{% endif %}
+                {% if stars > 10 %}{% set stars = 10 %}{% endif %}
+                <span class="book-rating">
+                    {% for _ in range(stars) %}
+                        <img src="{{ url_for('static', filename='star.png') }}"
+                             alt="★"
+                             class="star-icon">
+                    {% endfor %}
+                    <span class="rating-number">({{ stars }}/10)</span>
+                </span>
+            {% else %}
+                <span class="book-rating no-rating">No ratings</span>
+            {% endif %}
+
+            {% if (b.total_copies - b.currently_issued_copies - b.currently_reserved_copies) > 0 %}
+                <span class="available">Available</span>
+            {% else %}
+                <span class="unavailable">Unavailable</span>
+            {% endif %}
+        </div>
+
+        <!-- Extension point -->
+        <!--
+        <div class="book-actions">
+            <a href="#">Details</a>
+            <a href="#">Reserve</a>
+        </div>
+        -->
+
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>No books found.</p>
+{% endif %}
+
+{% endblock %}

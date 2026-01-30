@@ -294,7 +294,7 @@ def register_routes(app):
                         flash("Row inserted successfully", "success")
                         return redirect(url_for("admin_table", table_name=table_name))
                     except SQLAlchemyError as e:
-                        flash(f"Failed to update row: {str(getattr(e, 'orig', e))}", "error")
+                        flash(f"Failed to insert row: {str(getattr(e, 'orig', e))}", "error")
 
             return render_template(
                 "superadmin/add_row.html",
@@ -354,7 +354,7 @@ def register_routes(app):
             ).mappings().all()
 
         return render_template(
-            "notifications.html",
+            "reader/notifications.html",
             notifications=notifications
         )
     
@@ -377,4 +377,78 @@ def register_routes(app):
                 {"new": not current, "id": notif_id}
             )
 
-        return redirect(url_for("notifications"))
+        return redirect(url_for("notifications") + f"#notif-{notif_id}")
+    
+    # Browse books page
+    @app.route("/books")
+    def browse_books():
+        searches = {
+            "b.title": request.args.get("title", "").strip(),
+            "a.unique_name": request.args.get("authors", "").strip(),
+            "c.name": request.args.get("categories", "").strip(),
+            "b.description": request.args.get("description", "").strip()
+        }
+
+        conditions = []
+        params = {}
+        param_counter = 0
+
+        for column, search_string in searches.items():
+            local_conditions = []
+            for pattern in search_string.split("||"):
+                if not pattern:
+                    continue
+
+                param = f"p{param_counter}"
+                param_counter += 1
+                local_conditions.append("{column} ILIKE :{param}".format(column=column, param=param))
+                params[param] = f"{pattern}"
+
+            if local_conditions:
+                conditions.append(" OR ".join(local_conditions))
+
+        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        
+        with db.engine.begin() as conn:
+            rows = conn.execute(
+                text(f"""
+                    SELECT DISTINCT b.id
+                    FROM book b
+                    LEFT JOIN book_author ba ON ba.book_id = b.id
+                    LEFT JOIN author a ON a.id = ba.author_id
+                    LEFT JOIN book_category bc ON bc.book_id = b.id
+                    LEFT JOIN category c ON c.id = bc.category_id
+                    {where_clause}
+                """),
+                params
+            ).all()
+
+            book_ids = [r[0] for r in rows]
+            view_where_clause = ""
+            view_params = {}
+
+            if book_ids:
+                view_where_clause = f"WHERE book_id = ANY(:book_ids)"
+                view_params = {"book_ids": book_ids}
+                if request.args.get("available_only") == "1":
+                    view_where_clause += " AND (total_copies - currently_issued_copies - currently_reserved_copies) > 0"
+            elif conditions:
+                view_where_clause = "WHERE 1 = 0"
+            
+            books = conn.execute(
+                text(f"""
+                    SELECT *
+                    FROM book_info_view
+                    {view_where_clause}
+                    ORDER BY title
+                """),
+                view_params
+            ).mappings().all()
+
+            return render_template(
+                "reader/books.html",
+                books=books,
+                filters=request.args
+            )
+
+

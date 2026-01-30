@@ -54,7 +54,7 @@
                         {% for n in notifications %}
                         <div class="notification-card {% if not n.read %}unread{% endif %}" style="padding: 8px 10px;">
                             <div class="notif-content">
-                                <span class="timestamp">{{ n.sent_datetime.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+                                <span class="timestamp">{{ n.sent_datetime.strftime("%Y-%m-%d %H:%M") }}</span>
                                 <span class="subject">{{ n.subject }}</span>
                                 <p class="body">{{ n.body }}</p>
                             </div>

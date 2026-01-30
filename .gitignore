@@ -1,3 +1,5 @@
 __pycache__/
 .venv
 .env
+insert_showcase_data.sql
+ERD.pgerd
